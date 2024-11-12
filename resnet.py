@@ -23,7 +23,7 @@ train_datagen = ImageDataGenerator(
 )
 
 train_generator = train_datagen.flow_from_directory(
-    'path_to_10Knots_directory',  # replace with the path to your data
+    '10Knots',  # replace with the path to your data
     target_size=(img_height, img_width),
     batch_size=batch_size,
     class_mode='categorical',
@@ -31,7 +31,7 @@ train_generator = train_datagen.flow_from_directory(
 )
 
 validation_generator = train_datagen.flow_from_directory(
-    'path_to_10Knots_directory',  # replace with the path to your data
+    '10Knots',  # replace with the path to your data
     target_size=(img_height, img_width),
     batch_size=batch_size,
     class_mode='categorical',
@@ -53,7 +53,7 @@ model = models.Sequential([
 ])
 
 # Compile the model with a low learning rate for initial training
-model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
+model.compile(optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=1e-3),
               loss='categorical_crossentropy',
               metrics=['accuracy'])
 
@@ -92,3 +92,6 @@ history_fine = model.fit(
     initial_epoch=history.epoch[-1],
     callbacks=[early_stopping, model_checkpoint]
 )
+
+# Save the final model
+model.save('knot_classifier_resnet50.h5')
