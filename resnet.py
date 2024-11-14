@@ -53,7 +53,7 @@ model = models.Sequential([
 ])
 
 # Compile the model with a low learning rate for initial training
-model.compile(optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=1e-3),
+model.compile(optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=1e-2),
               loss='categorical_crossentropy',
               metrics=['accuracy'])
 
@@ -62,7 +62,7 @@ early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weig
 model_checkpoint = ModelCheckpoint('best_knot_resnet50.h5', save_best_only=True)
 
 # Train the model (initial training of custom top layers only)
-epochs = 10
+epochs = 5
 history = model.fit(
     train_generator,
     validation_data=validation_generator,
@@ -77,12 +77,12 @@ for layer in base_model.layers[:-10]:  # Only fine-tune the last 10 layers
     layer.trainable = False
 
 # Compile with a lower learning rate for fine-tuning
-model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-5),
+model.compile(optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=1e-5),
               loss='categorical_crossentropy',
               metrics=['accuracy'])
 
 # Fine-tune the model (training the entire model)
-fine_tune_epochs = 10
+fine_tune_epochs = 5
 total_epochs = epochs + fine_tune_epochs
 
 history_fine = model.fit(
@@ -94,4 +94,4 @@ history_fine = model.fit(
 )
 
 # Save the final model
-model.save('knot_classifier_resnet50.h5')
+model.save('knot_classifier_resnet50.keras')

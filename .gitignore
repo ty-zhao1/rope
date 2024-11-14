@@ -1,3 +1,5 @@
 *.jpg
 *._.DS_Store
 *.DS_Store
+*.keras
+*.h5
