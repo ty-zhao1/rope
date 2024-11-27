@@ -47,23 +47,39 @@ validation_generator = train_datagen.flow_from_directory(
     subset='validation'
 )
 
+# model = models.Sequential([
+#     layers.Conv2D(32, (3, 3), activation='relu', input_shape=(img_height, img_width, 3)),
+#     layers.BatchNormalization(),
+#     layers.MaxPooling2D((2, 2)),
+#     layers.Conv2D(64, (3, 3), activation='relu'),
+#     layers.BatchNormalization(),
+#     layers.MaxPooling2D((2, 2)),
+#     layers.Conv2D(128, (3, 3), activation='relu'),
+#     layers.BatchNormalization(),
+#     layers.MaxPooling2D((2, 2)),
+#     layers.Conv2D(128, (3, 3), activation='relu'),
+#     layers.BatchNormalization(),
+#     layers.MaxPooling2D((2, 2)),
+#     layers.GlobalAveragePooling2D(),
+#     layers.Dropout(0.5),
+#     layers.Dense(train_generator.num_classes, activation='softmax')
+# ])
+
 model = models.Sequential([
-    layers.Conv2D(32, (3, 3), activation='relu', input_shape=(img_height, img_width, 3)),
+    layers.Conv2D(16, (3, 3), activation='relu', input_shape=(img_height, img_width, 3)),  # Fewer filters
     layers.BatchNormalization(),
     layers.MaxPooling2D((2, 2)),
-    layers.Conv2D(64, (3, 3), activation='relu'),
+
+    layers.Conv2D(32, (3, 3), activation='relu'),  # Reduce filters here
     layers.BatchNormalization(),
     layers.MaxPooling2D((2, 2)),
-    layers.Conv2D(128, (3, 3), activation='relu'),
+
+    layers.Conv2D(64, (3, 3), activation='relu'),  # Only one larger Conv2D layer
     layers.BatchNormalization(),
     layers.MaxPooling2D((2, 2)),
-    layers.Conv2D(128, (3, 3), activation='relu'),
-    layers.BatchNormalization(),
-    layers.MaxPooling2D((2, 2)),
-    # layers.GlobalAveragePooling2D(),
-    layers.Flatten(),
-    layers.Dropout(0.5),
-    layers.Dense(train_generator.num_classes, activation='softmax')
+
+    layers.GlobalAveragePooling2D(),  # Still keep the global pooling
+    layers.Dense(train_generator.num_classes, activation='softmax')  # Output layer
 ])
 
 

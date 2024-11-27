@@ -1,14 +1,19 @@
 import tensorflow as tf
 from tensorflow.keras import layers, models
-from tensorflow.keras.applications import ResNet50
+from tensorflow.keras.applications import ResNet50, MobileNetV2
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+from scheduler import OneCycleLRSchedule
+
+devices = tf.config.list_physical_devices()
+print("Devices available:", devices)
 
 # Parameters
 img_height = 432
 img_width = 648
 batch_size = 32
 num_classes = 10  # Number of knot classes
+lr = 1e-2
 
 # Data augmentation and loading
 train_datagen = ImageDataGenerator(
@@ -39,8 +44,8 @@ validation_generator = train_datagen.flow_from_directory(
 )
 
 # Load the ResNet50 model pre-trained on ImageNet, excluding the top layer
-base_model = ResNet50(weights='imagenet', include_top=False, input_shape=(img_height, img_width, 3))
-
+# base_model = ResNet50(weights='imagenet', include_top=False, input_shape=(img_height, img_width, 3))
+base_model = MobileNetV2(weights='imagenet', include_top=False, input_shape=(img_height, img_width, 3))
 # Freeze the base model
 base_model.trainable = False
 
@@ -53,16 +58,16 @@ model = models.Sequential([
 ])
 
 # Compile the model with a low learning rate for initial training
-model.compile(optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=1e-2),
+model.compile(optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=lr),
               loss='categorical_crossentropy',
               metrics=['accuracy'])
 
 # Early stopping and model checkpoint
 early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
-model_checkpoint = ModelCheckpoint('best_knot_resnet50.h5', save_best_only=True)
+model_checkpoint = ModelCheckpoint('best_knot_MobileNetV2.h5', save_best_only=True)
 
 # Train the model (initial training of custom top layers only)
-epochs = 5
+epochs = 20
 history = model.fit(
     train_generator,
     validation_data=validation_generator,
@@ -70,28 +75,5 @@ history = model.fit(
     callbacks=[early_stopping, model_checkpoint]
 )
 
-# Fine-tune some layers of ResNet-50
-# Unfreeze the last few layers of the base model
-base_model.trainable = True
-for layer in base_model.layers[:-10]:  # Only fine-tune the last 10 layers
-    layer.trainable = False
-
-# Compile with a lower learning rate for fine-tuning
-model.compile(optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=1e-5),
-              loss='categorical_crossentropy',
-              metrics=['accuracy'])
-
-# Fine-tune the model (training the entire model)
-fine_tune_epochs = 5
-total_epochs = epochs + fine_tune_epochs
-
-history_fine = model.fit(
-    train_generator,
-    validation_data=validation_generator,
-    epochs=total_epochs,
-    initial_epoch=history.epoch[-1],
-    callbacks=[early_stopping, model_checkpoint]
-)
-
 # Save the final model
-model.save('knot_classifier_resnet50.keras')
+model.save(f'knot_classifier_MobileNetV2_{batch_size}_{lr}_{epochs}.keras')
