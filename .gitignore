@@ -3,3 +3,6 @@
 *.DS_Store
 *.keras
 *.h5
+*.jpeg
+*.webp
+*.png
