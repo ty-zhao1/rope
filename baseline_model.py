@@ -1,19 +1,24 @@
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras import layers, models, Sequential
+from tensorflow.keras.callbacks import EarlyStopping
 import os
+import argparse
 
-# Set up directories
+parser = argparse.ArgumentParser()
+parser.add_argument('--lr', type=float, default=1e-3)
+parser.add_argument('--simple', type=bool, default=False)
+args = parser.parse_args()
+
 train_dir = '10Knots_split/train'
 val_dir = '10Knots_split/val'
 
-# Parameters
 batch_size = 32
-
 img_height = 432
 img_width = 648
+lr = args.lr
 
-# Define ImageDataGenerators
+
 train_datagen = ImageDataGenerator(
     rescale=1.0 / 255,         # Normalize pixel values to [0, 1]
     rotation_range=20,         # Rotate images randomly within ±20 degrees
@@ -24,16 +29,16 @@ train_datagen = ImageDataGenerator(
     horizontal_flip=True       # Randomly flip images horizontally
 )
 
-val_datagen = ImageDataGenerator(rescale=1.0 / 255)  # Only normalize
+val_datagen = ImageDataGenerator(rescale=1.0 / 255)
 
-test_datagen = ImageDataGenerator(rescale=1.0 / 255)  # Only normalize
+test_datagen = ImageDataGenerator(rescale=1.0 / 255)
 
 # Load datasets
 train_generator = train_datagen.flow_from_directory(
     train_dir,
-    target_size=(img_height, img_width),    # Resize all images to 224x224
+    target_size=(img_height, img_width), 
     batch_size=32,
-    class_mode="categorical"   # One-hot encode labels for categorical crossentropy
+    class_mode="categorical"
 )
 
 val_generator = val_datagen.flow_from_directory(
@@ -43,37 +48,50 @@ val_generator = val_datagen.flow_from_directory(
     class_mode="categorical"
 )
 
-model = models.Sequential([
-    layers.Conv2D(16, (3, 3), activation='relu', input_shape=(img_height, img_width, 3)),  # Fewer filters
-    layers.BatchNormalization(),
-    layers.MaxPooling2D((2, 2)),
+if args.simple:
+    model = models.Sequential([
+        layers.Conv2D(32, (3, 3), activation='relu', input_shape=(img_height, img_width, 3)),
+        layers.MaxPooling2D((2, 2)),
+        layers.Conv2D(64, (3, 3), activation='relu'),
+        layers.MaxPooling2D((2, 2)),
+        layers.Conv2D(128, (3, 3), activation='relu'),
+        layers.MaxPooling2D((2, 2)),
+        layers.Flatten(),
+        layers.Dense(128, activation='relu'),
+        layers.Dropout(0.5),
+        layers.Dense(9, activation='softmax'),
+    ])
+else:
+    model = models.Sequential([
+        layers.Conv2D(16, (3, 3), activation='relu', input_shape=(img_height, img_width, 3)),
+        layers.BatchNormalization(),
+        layers.MaxPooling2D((2, 2)),
 
-    layers.Conv2D(32, (3, 3), activation='relu'),  # Reduce filters here
-    layers.BatchNormalization(),
-    layers.MaxPooling2D((2, 2)),
+        layers.Conv2D(32, (3, 3), activation='relu'),
+        layers.BatchNormalization(),
+        layers.MaxPooling2D((2, 2)),
 
-    layers.Conv2D(64, (3, 3), activation='relu'),  # Only one larger Conv2D layer
-    layers.BatchNormalization(),
-    layers.MaxPooling2D((2, 2)),
+        layers.Conv2D(64, (3, 3), activation='relu'),
+        layers.BatchNormalization(),
+        layers.MaxPooling2D((2, 2)),
 
-    layers.GlobalAveragePooling2D(),  # Still keep the global pooling
-    layers.Dense(train_generator.num_classes, activation='softmax')  # Output layer
-])
+        layers.GlobalAveragePooling2D(), 
+        layers.Dense(train_generator.num_classes, activation='softmax')
+    ])
+early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
 
-
-# Compile the model
 model.compile(optimizer='adam',
               loss='categorical_crossentropy',
-              metrics=['accuracy'])
+              metrics=['accuracy'],)
 
-# Train the model
 epochs = 20
 history = model.fit(
     train_generator,
     validation_data=val_generator,
-    epochs=epochs
+    epochs=epochs,
+    callbacks=[early_stopping]
 )
 
 # Save the model
-# model.save('knot_classifier_model.h5')
-model.save('baseline_model.keras')
+save_path = f'baseline_model_{lr}.keras' if not args.simple else f'baseline_model_simple_{lr}.keras'
+model.save(save_path)
